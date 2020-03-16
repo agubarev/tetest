@@ -1,0 +1,40 @@
+version: "3.7"
+
+networks:
+  test_network:
+    driver: bridge
+
+services:
+  app:
+    container_name: tetest
+    build: .
+    ports:
+      - 8080:8080
+    restart: on-failure
+    depends_on:
+      - mysql
+    networks:
+      - test_network
+
+  mysql:
+    image: mysql:8
+    container_name: mysql
+    ports:
+      - 3308:3306
+    env_file: .env
+    environment:
+      - MYSQL_ROOT_HOST=${DB_HOST}
+      - MYSQL_USER=${DB_USER}
+      - MYSQL_PASSWORD=${DB_PASSWORD}
+      - MYSQL_DATABASE=${DB_NAME}
+      - MYSQL_ROOT_PASSWORD=${DB_PASSWORD}
+    volumes:
+      - mysql:/var/lib/mysql
+    networks:
+      - test_network
+
+
+volumes:
+  app:
+  mysql:
+
