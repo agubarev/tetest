@@ -16,13 +16,16 @@ limitations under the License.
 package cmd
 
 import (
+	"context"
+	"fmt"
 	"log"
 	"os"
 	"strings"
 
-	"github.com/davecgh/go-spew/spew"
-	"github.com/mmcdole/gofeed"
+	"github.com/agubarev/tetest/internal/currency"
+	"github.com/gocraft/dbr"
 	"github.com/spf13/cobra"
+	"go.uber.org/zap"
 )
 
 // importCmd represents the import command
@@ -30,21 +33,56 @@ var importCmd = &cobra.Command{
 	Use:   "import",
 	Short: "Imports currency feed",
 	Run: func(cmd *cobra.Command, args []string) {
-		feedURL := strings.TrimSpace(os.Getenv("TETEST_FEED_URL"))
+		// basic validation
+		feedURL := strings.TrimSpace(os.Getenv("FEED_URL"))
 		if feedURL == "" {
-			log.Fatal("env `TETEST_FEED_URL` is not set")
+			log.Fatal("env `FEED_URL` is not set")
 		}
 
-		// initializing feed parser
-		p := gofeed.NewParser()
+		//---------------------------------------------------------------------------
+		// initializing mysql store
+		//---------------------------------------------------------------------------
+		dsn := fmt.Sprintf(
+			"%s:%s@tcp(%s:%s)/%s",
+			os.Getenv("DB_USER"),
+			os.Getenv("DB_PASSWORD"),
+			os.Getenv("DB_HOST"),
+			os.Getenv("DB_PORT"),
+			os.Getenv("DB_NAME"),
+		)
 
-		f, err := p.ParseURL(feedURL)
+		connection, err := dbr.Open("mysql", dsn, nil)
 		if err != nil {
-			log.Fatalf("failed to parse feed [%s]: %s", feedURL, err)
+			log.Fatalf("failed to initialize mysql connection: %s", err)
 		}
 
-		for _, v := range f.Items {
-			spew.Dump(strings.SplitN(strings.TrimSpace(v.Description), " ", 3))
+		mysqlStore, err := NewDefaultMySQLStore(connection)
+		if err != nil {
+			log.Fatalf("failed to initialize mysql backend store: %s", err)
+		}
+
+		//---------------------------------------------------------------------------
+		// initialzing new currency manager
+		//---------------------------------------------------------------------------
+		m, err := currency.NewManager(mysqlStore, feedURL)
+		if err != nil {
+			log.Fatalf("failed to initialize currency manager: %s", err)
+		}
+
+		// initializing main logger
+		l, err := zap.NewProduction()
+		if err != nil {
+			log.Fatalf("failed to initialize logger: %s", err)
+		}
+
+		// assigning logger to the manager
+		if err = m.SetLogger(l); err != nil {
+			log.Fatalf("failed to set main logger: %s", err)
+		}
+
+		// importing currencies from remote source
+		if err = m.Import(context.Background()); err != nil {
+			log.Fatalf("failed to import currency: %s", err)
 		}
 	},
 }
