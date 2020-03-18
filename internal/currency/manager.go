@@ -15,6 +15,7 @@ import (
 
 // errors
 var (
+	ErrNilManager           = errors.New("currency manager is nil")
 	ErrNilDatabase          = errors.New("database is nil")
 	ErrNilCurrencyStore     = errors.New("currency store is nil")
 	ErrCurrencyNotFound     = errors.New("currency not found")
@@ -172,6 +173,7 @@ func (m *Manager) BulkCreate(ctx context.Context, cs []Currency) (_ []Currency, 
 			return nil, err
 		}
 
+		c.ID = strings.ToUpper(strings.TrimSpace(c.ID))
 		c.CreatedAt = dbr.NewNullTime(time.Now())
 	}
 
@@ -179,6 +181,55 @@ func (m *Manager) BulkCreate(ctx context.Context, cs []Currency) (_ []Currency, 
 	cs, err = store.BulkCreate(ctx, cs)
 	if err != nil {
 		return cs, err
+	}
+
+	return cs, nil
+}
+
+func (m *Manager) GetLatest(ctx context.Context) (cs []Currency, err error) {
+	if m == nil {
+		return nil, ErrNilManager
+	}
+
+	// NOTE: no caching for test project
+
+	store, err := m.Store()
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to obtain currency store")
+	}
+
+	cs, err = store.AllLatest(ctx)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to fetch latest currencies from the store")
+	}
+
+	// NOTE: not caching anything
+
+	return cs, nil
+}
+
+func (m *Manager) GetByID(ctx context.Context, id string) (cs []Currency, err error) {
+	if m == nil {
+		return nil, ErrNilManager
+	}
+
+	store, err := m.Store()
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to obtain currency store")
+	}
+
+	// preparing id value
+	id = strings.ToUpper(strings.TrimSpace(id))
+
+	cs, err = store.HistoryByID(ctx, id)
+	if err != nil {
+		return nil, errors.Wrapf(err, "failed to fetch currency history for ID: %s", id)
+	}
+
+	// handling 404 case, even though this function
+	// returns multiple values
+	if len(cs) == 0 {
+		return nil, ErrCurrencyNotFound
 	}
 
 	return cs, nil

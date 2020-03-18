@@ -2,7 +2,6 @@ package currency
 
 import (
 	"context"
-	"time"
 )
 
 // Store represents an API interface contract
@@ -10,6 +9,6 @@ import (
 // for demonstration purposes only
 type Store interface {
 	BulkCreate(ctx context.Context, cs []Currency) (_ []Currency, err error)
-	ByDate(ctx context.Context, date time.Time) (cs []Currency, err error)
-	ByID(ctx context.Context, id string) (cs []Currency, err error)
+	AllLatest(ctx context.Context) (cs []Currency, err error)
+	HistoryByID(ctx context.Context, id string) (cs []Currency, err error)
 }

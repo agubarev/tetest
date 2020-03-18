@@ -3,7 +3,6 @@ package currency
 import (
 	"context"
 	"database/sql"
-	"time"
 
 	"github.com/gocraft/dbr/v2"
 	"github.com/pkg/errors"
@@ -121,10 +120,10 @@ func (s *defaultMySQLStore) BulkCreate(ctx context.Context, cs []Currency) (_ []
 	return cs, nil
 }
 
-func (s *defaultMySQLStore) ByID(ctx context.Context, id string) (cs []Currency, err error) {
-	return s.manyByQuery(ctx, "SELECT * FROM `currency` WHERE id = ? ORDER BY created_at DESC, updated_at DESC", id)
+func (s *defaultMySQLStore) HistoryByID(ctx context.Context, id string) (cs []Currency, err error) {
+	return s.manyByQuery(ctx, "SELECT * FROM `currency` WHERE id = ? ORDER BY pub_date DESC", id)
 }
 
-func (s *defaultMySQLStore) ByDate(ctx context.Context, date time.Time) (cs []Currency, err error) {
-	return s.manyByQuery(ctx, "SELECT * FROM `currency` WHERE `pub_date` = ?", dbr.Expr("DATE(?)", date.Local()))
+func (s *defaultMySQLStore) AllLatest(ctx context.Context) (cs []Currency, err error) {
+	return s.manyByQuery(ctx, "SELECT * FROM `currency` WHERE `pub_date` = (SELECT MAX(pub_date) FROM `currency`)")
 }

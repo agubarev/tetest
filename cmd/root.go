@@ -17,12 +17,21 @@ package cmd
 
 import (
 	"fmt"
+
+	"github.com/agubarev/tetest/internal/currency"
+	"github.com/gocraft/dbr/v2"
 	"github.com/spf13/cobra"
+	"go.uber.org/zap"
+
+	"log"
 	"os"
+	"strings"
 
 	homedir "github.com/mitchellh/go-homedir"
 	"github.com/spf13/viper"
 )
+
+var manager *currency.Manager
 
 var cfgFile string
 
@@ -62,6 +71,9 @@ func init() {
 	// Cobra also supports local flags, which will only run
 	// when this action is called directly.
 	rootCmd.Flags().BoolP("toggle", "t", false, "Help message for toggle")
+
+	// initialzing currency project
+	initManager()
 }
 
 // initConfig reads in config file and ENV variables if set.
@@ -87,5 +99,60 @@ func initConfig() {
 	// If a config file is found, read it in.
 	if err := viper.ReadInConfig(); err == nil {
 		fmt.Println("Using config file:", viper.ConfigFileUsed())
+	}
+}
+
+func initManager() {
+	// basic validation
+	feedURL := strings.TrimSpace(os.Getenv("FEED_URL"))
+	if feedURL == "" {
+		log.Fatal("env `FEED_URL` is not set")
+	}
+
+	// initializing main logger
+	// NOTE: using a preset logger is sufficient for testing purposes
+	l, err := zap.NewDevelopment()
+	if err != nil {
+		log.Fatalf("failed to initialize logger: %s", err)
+	}
+
+	//---------------------------------------------------------------------------
+	// initializing mysql store
+	//---------------------------------------------------------------------------
+	l.Info("initialzing database connection")
+
+	dsn := fmt.Sprintf(
+		"%s:%s@tcp(%s:%s)/%s",
+		os.Getenv("DB_USER"),
+		os.Getenv("DB_PASSWORD"),
+		os.Getenv("DB_HOST"),
+		os.Getenv("DB_PORT"),
+		os.Getenv("DB_NAME"),
+	)
+
+	connection, err := dbr.Open("mysql", dsn, nil)
+	if err != nil {
+		log.Fatalf("failed to initialize mysql connection: %s", err)
+	}
+
+	l.Info("initializing default MySQL store")
+	mysqlStore, err := currency.NewDefaultMySQLStore(connection)
+	if err != nil {
+		log.Fatalf("failed to initialize mysql backend store: %s", err)
+	}
+
+	//---------------------------------------------------------------------------
+	// initialzing new currency manager
+	//---------------------------------------------------------------------------
+	l.Info("initializing currency manager")
+	manager, err = currency.NewManager(mysqlStore, feedURL)
+	if err != nil {
+		log.Fatalf("failed to initialize currency manager: %s", err)
+	}
+
+	// assigning logger to the manager
+	l.Info("configuring main logger")
+	if err = manager.SetLogger(l); err != nil {
+		log.Fatalf("failed to set main logger: %s", err)
 	}
 }

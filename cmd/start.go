@@ -16,23 +16,35 @@ limitations under the License.
 package cmd
 
 import (
-	"fmt"
+	"context"
+	"log"
 
+	"github.com/agubarev/tetest/internal/currency"
+	"github.com/agubarev/tetest/internal/server"
+	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
 )
 
 // startCmd represents the start command
 var startCmd = &cobra.Command{
 	Use:   "start",
-	Short: "A brief description of your command",
-	Long: `A longer description that spans multiple lines and likely contains examples
-and usage of using your command. For example:
-
-Cobra is a CLI library for Go that empowers applications.
-This application is a tool to generate the needed files
-to quickly create a Cobra application.`,
+	Short: "Starts the currency server",
 	Run: func(cmd *cobra.Command, args []string) {
-		fmt.Println("start called")
+		if manager == nil {
+			log.Fatal(currency.ErrNilManager)
+		}
+
+		// running import before server start (a slight code duplication, but is ok for the test)
+		manager.Logger().Info("importing currency data")
+		if err := manager.Import(context.Background()); err != nil {
+			log.Fatalf("failed to import currency: %s", err)
+		}
+
+		// initialzing and starting the server listener
+		manager.Logger().Info("starting server")
+		if err := server.Run(context.Background(), manager, ":8080"); err != nil {
+			log.Fatal(errors.Wrap(err, "failed to start the server"))
+		}
 	},
 }
 
