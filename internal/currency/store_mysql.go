@@ -5,7 +5,6 @@ import (
 	"database/sql"
 	"time"
 
-	"github.com/agubarev/tetest/util/guard"
 	"github.com/gocraft/dbr/v2"
 	"github.com/pkg/errors"
 )
@@ -77,7 +76,24 @@ func (s *defaultMySQLStore) BulkCreate(ctx context.Context, cs []Currency) (_ []
 	//---------------------------------------------------------------------------
 	// building the bulk statement
 	//---------------------------------------------------------------------------
-	stmt := tx.InsertInto("currency").Columns(guard.DBColumnsFrom(cs[0])...)
+	// NOTE: because I want currency values to be updated on repetitive
+	// insert attempts (i.e. multiple import runs or external changes),
+	// so I'm using a prepared statement, otherwise I'd simply go for the following:
+	// stmt := tx.InsertInto("currency").Columns(guard.DBColumnsFrom(&cs[0])...)
+
+	stmt, err := tx.PrepareContext(ctx, `INSERT INTO currency(id, value, pub_date, created_at)
+		VALUES(?, ?, ?, NOW()) ON DUPLICATE KEY UPDATE value = ?, updated_at = NOW()`)
+
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to prepare statement")
+	}
+
+	// statement must be closed afterwards
+	defer func() {
+		if err = stmt.Close(); err != nil {
+			err = errors.Wrap(err, "failed to close prepared statement")
+		}
+	}()
 
 	// validating each c individually
 	for i := range cs {
@@ -85,13 +101,17 @@ func (s *defaultMySQLStore) BulkCreate(ctx context.Context, cs []Currency) (_ []
 			return nil, err
 		}
 
-		// adding value to the batch
-		stmt = stmt.Record(&cs[i])
+		c := cs[i]
+
+		// NOTE: ignoring execution result
+		if _, err = stmt.ExecContext(ctx, c.ID, c.Value, c.PubDate, c.Value); err != nil {
+			return nil, errors.Wrap(err, "failed to execute statement")
+		}
 	}
 
-	// executing the batch
-	if _, err = stmt.ExecContext(ctx); err != nil {
-		return nil, errors.Wrap(err, "bulk insert failed")
+	// committing
+	if err = tx.Commit(); err != nil {
+		return nil, errors.Wrap(err, "failed to commit database transaction")
 	}
 
 	// NOTE: since this is a very simple test case, thus
@@ -102,9 +122,9 @@ func (s *defaultMySQLStore) BulkCreate(ctx context.Context, cs []Currency) (_ []
 }
 
 func (s *defaultMySQLStore) ByID(ctx context.Context, id string) (cs []Currency, err error) {
-	return s.manyByQuery(ctx, "SELECT * FROM `currency` WHERE id = ?", id)
+	return s.manyByQuery(ctx, "SELECT * FROM `currency` WHERE id = ? ORDER BY created_at DESC, updated_at DESC", id)
 }
 
 func (s *defaultMySQLStore) ByDate(ctx context.Context, date time.Time) (cs []Currency, err error) {
-	return s.manyByQuery(ctx, "SELECT * FROM `currency` WHERE `valid_date` = ? LIMIT 1", dbr.Expr("DATE(?)", time.Time{}))
+	return s.manyByQuery(ctx, "SELECT * FROM `currency` WHERE `pub_date` = ?", dbr.Expr("DATE(?)", date.Local()))
 }

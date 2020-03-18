@@ -4,8 +4,8 @@ go 1.14
 
 require (
 	github.com/PuerkitoBio/goquery v1.5.1 // indirect
+	github.com/davecgh/go-spew v1.1.1
 	github.com/go-sql-driver/mysql v1.5.0
-	github.com/gocraft/dbr v0.0.0-20190714181702-8114670a83bd
 	github.com/gocraft/dbr/v2 v2.7.0
 	github.com/mitchellh/go-homedir v1.1.0
 	github.com/mmcdole/gofeed v1.0.0-beta2

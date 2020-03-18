@@ -138,15 +138,14 @@ func (m *Manager) Import(ctx context.Context) (err error) {
 		}
 
 		// initialzing currency slice
-		cs := make([]Currency, len(parsedMap))
+		cs := make([]Currency, 0, len(parsedMap))
 
 		// initializing currency objects
 		for id, value := range parsedMap {
 			cs = append(cs, Currency{
-				ID:        strings.ToUpper(id),
-				Value:     value,
-				ValidDate: dbr.NewNullTime(v.PublishedParsed.Local()),
-				CreatedAt: dbr.NullTime{},
+				ID:      strings.ToUpper(id),
+				Value:   value,
+				PubDate: dbr.NewNullTime(v.PublishedParsed.Local()),
 			})
 		}
 

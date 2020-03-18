@@ -10,8 +10,9 @@ import (
 type Currency struct {
 	ID        string       `db:"id" json:"id"`
 	Value     float64      `db:"value" json:"value"`
-	ValidDate dbr.NullTime `db:"valid_date" json:"valid_date"`
+	PubDate   dbr.NullTime `db:"pub_date" json:"pub_date"`
 	CreatedAt dbr.NullTime `db:"created_at" json:"created_at"`
+	UpdatedAt dbr.NullTime `db:"updated_at" json:"updated_at"`
 }
 
 func (c Currency) validate() (err error) {
