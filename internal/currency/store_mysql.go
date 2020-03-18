@@ -3,6 +3,7 @@ package currency
 import (
 	"context"
 	"database/sql"
+	"time"
 
 	"github.com/agubarev/tetest/util/guard"
 	"github.com/gocraft/dbr/v2"
@@ -59,9 +60,8 @@ func (s *defaultMySQLStore) manyByQuery(ctx context.Context, q string, args ...i
 	return items, nil
 }
 
-// CreateCurrency creates a new entry in the storage backend
-func (s *defaultMySQLStore) BulkCreateCurrency(ctx context.Context, items []Currency) (_ []Currency, err error) {
-	currencyLen := len(items)
+func (s *defaultMySQLStore) BulkCreate(ctx context.Context, cs []Currency) (_ []Currency, err error) {
+	currencyLen := len(cs)
 
 	// there must be something first
 	if currencyLen == 0 {
@@ -77,43 +77,34 @@ func (s *defaultMySQLStore) BulkCreateCurrency(ctx context.Context, items []Curr
 	//---------------------------------------------------------------------------
 	// building the bulk statement
 	//---------------------------------------------------------------------------
-	stmt := tx.InsertInto("currency").Columns(guard.DBColumnsFrom(items[0])...)
+	stmt := tx.InsertInto("currency").Columns(guard.DBColumnsFrom(cs[0])...)
 
 	// validating each c individually
-	for i := range items {
-		if err := items[i].validate(); err != nil {
+	for i := range cs {
+		if err := cs[i].validate(); err != nil {
 			return nil, err
 		}
 
 		// adding value to the batch
-		stmt = stmt.Record(items[i])
+		stmt = stmt.Record(&cs[i])
 	}
 
 	// executing the batch
-	result, err := stmt.ExecContext(ctx)
-	if err != nil {
+	if _, err = stmt.ExecContext(ctx); err != nil {
 		return nil, errors.Wrap(err, "bulk insert failed")
 	}
 
-	// returned ID belongs to the first c created
-	firstNewID, err := result.LastInsertId()
-	if err != nil {
-		return nil, err
-	}
+	// NOTE: since this is a very simple test case, thus
+	// ignoring execution result and not assigning
+	// keys (because in this case ID is the currency name)
 
-	if err = tx.Commit(); err != nil {
-		return nil, errors.Wrap(err, "failed to commit database transaction")
-	}
-
-	// distributing new IDs in their sequential order
-	for i := range items {
-		items[i].ID = int(firstNewID)
-		firstNewID++
-	}
-
-	return items, nil
+	return cs, nil
 }
 
-func (s *defaultMySQLStore) FetchCurrencyByID(ctx context.Context, id int) (c Currency, err error) {
-	return s.oneByQuery(ctx, "SELECT * FROM `c` WHERE id = ? LIMIT 1", id)
+func (s *defaultMySQLStore) ByID(ctx context.Context, id string) (cs []Currency, err error) {
+	return s.manyByQuery(ctx, "SELECT * FROM `currency` WHERE id = ?", id)
+}
+
+func (s *defaultMySQLStore) ByDate(ctx context.Context, date time.Time) (cs []Currency, err error) {
+	return s.manyByQuery(ctx, "SELECT * FROM `currency` WHERE `valid_date` = ? LIMIT 1", dbr.Expr("DATE(?)", time.Time{}))
 }

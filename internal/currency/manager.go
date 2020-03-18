@@ -5,7 +5,9 @@ import (
 	"log"
 	"strconv"
 	"strings"
+	"time"
 
+	"github.com/gocraft/dbr/v2"
 	"github.com/mmcdole/gofeed"
 	"github.com/pkg/errors"
 	"go.uber.org/zap"
@@ -36,16 +38,17 @@ func NewManager(s Store, feedURL string) (*Manager, error) {
 		return nil, errors.Wrap(ErrNilCurrencyStore, "failed to initialize currency manager")
 	}
 
-	m := &Manager{
-		store: s,
-	}
-
 	feedURL = strings.TrimSpace(feedURL)
 	if feedURL == "" {
 		return nil, ErrEmptyFeedURL
 	}
 
-	return &Manager{feedAddr: feedURL}, nil
+	m := &Manager{
+		store:    s,
+		feedAddr: feedURL,
+	}
+
+	return m, nil
 }
 
 // Store returns store if set
@@ -129,51 +132,55 @@ func (m *Manager) Import(ctx context.Context) (err error) {
 	// transforming raw payload into local currency
 	//---------------------------------------------------------------------------
 	for _, v := range f.Items {
-		cs, err := fn(strings.Split(strings.TrimSpace(v.Description), " "))
+		parsedMap, err := fn(strings.Split(strings.TrimSpace(v.Description), " "))
 		if err != nil {
 			return errors.Wrap(err, "failed to parse raw currency payload")
 		}
 
-		// initializing data container for 1 day
-		day := Day{
-			PublishedAt: v.PublishedParsed.Local(),
-			Roster:      make([]Currency, 0, len(cs)),
-		}
+		// initialzing currency slice
+		cs := make([]Currency, len(parsedMap))
 
 		// initializing currency objects
-		for id, value := range cs {
-			day.Roster = append(day.Roster, Currency{
-				ID:    strings.ToUpper(id),
-				Value: value,
+		for id, value := range parsedMap {
+			cs = append(cs, Currency{
+				ID:        strings.ToUpper(id),
+				Value:     value,
+				ValidDate: dbr.NewNullTime(v.PublishedParsed.Local()),
+				CreatedAt: dbr.NullTime{},
 			})
 		}
 
 		// creating objects in bulk
-		if _, err = m.BulkCreateDay(ctx, day); err != nil {
-			return errors.Wrapf(err, "failed to import currency for date: %s", day.PublishedAt.Local().Format("02012006"))
+		if _, err = m.BulkCreate(ctx, cs); err != nil {
+			return errors.Wrapf(err, "failed to import currency for date: %s", v.PublishedParsed.Local().Format("02012006"))
 		}
 	}
 
 	return nil
 }
 
-// BulkCreateDay creates currency values grouped by its publication date
-func (m *Manager) BulkCreateDay(ctx context.Context, day Day) (_ Day, err error) {
-	if err = day.validate(); err != nil {
-		return day, err
-	}
-
+// BulkCreate creates currency values grouped by its publication date
+func (m *Manager) BulkCreate(ctx context.Context, cs []Currency) (_ []Currency, err error) {
 	// obtaining store
 	store, err := m.Store()
 	if err != nil {
-		return day, err
+		return nil, err
+	}
+
+	// validating and initializing new records
+	for _, c := range cs {
+		if err = c.validate(); err != nil {
+			return nil, err
+		}
+
+		c.CreatedAt = dbr.NewNullTime(time.Now())
 	}
 
 	// storing items
-	day, err = store.BulkCreateDay(ctx, day)
+	cs, err = store.BulkCreate(ctx, cs)
 	if err != nil {
-		return day, err
+		return cs, err
 	}
 
-	return day, nil
+	return cs, nil
 }

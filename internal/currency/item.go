@@ -2,28 +2,9 @@ package currency
 
 import (
 	"strings"
-	"time"
 
 	"github.com/gocraft/dbr/v2"
-	"github.com/pkg/errors"
 )
-
-// Day represents a simple container that groups
-// currency values for a specific date
-type Day struct {
-	PublishedAt time.Time
-	Roster      []Currency
-}
-
-func (day Day) validate() (err error) {
-	for _, c := range day.Roster {
-		if err = c.validate(); err != nil {
-			return errors.Wrapf(err, "currency validation failed for date: %s", day.PublishedAt.Local().Format("02012006"))
-		}
-	}
-
-	return nil
-}
 
 // Currency represents a single currency item
 type Currency struct {

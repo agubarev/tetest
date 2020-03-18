@@ -23,7 +23,8 @@ import (
 	"strings"
 
 	"github.com/agubarev/tetest/internal/currency"
-	"github.com/gocraft/dbr"
+	_ "github.com/go-sql-driver/mysql"
+	"github.com/gocraft/dbr/v2"
 	"github.com/spf13/cobra"
 	"go.uber.org/zap"
 )
@@ -56,7 +57,7 @@ var importCmd = &cobra.Command{
 			log.Fatalf("failed to initialize mysql connection: %s", err)
 		}
 
-		mysqlStore, err := NewDefaultMySQLStore(connection)
+		mysqlStore, err := currency.NewDefaultMySQLStore(connection)
 		if err != nil {
 			log.Fatalf("failed to initialize mysql backend store: %s", err)
 		}

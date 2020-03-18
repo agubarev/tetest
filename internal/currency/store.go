@@ -9,7 +9,7 @@ import (
 // NOTE: this is a very simplified version, inteded
 // for demonstration purposes only
 type Store interface {
-	BulkCreateDay(ctx context.Context, day Day) (items []Currency, err error)
-	ListByID(ctx context.Context, id string) (items []Currency, err error)
-	ListByDate(ctx context.Context, date time.Time) (items []Currency, err error)
+	BulkCreate(ctx context.Context, cs []Currency) (_ []Currency, err error)
+	ByDate(ctx context.Context, date time.Time) (cs []Currency, err error)
+	ByID(ctx context.Context, id string) (cs []Currency, err error)
 }
