@@ -5,14 +5,15 @@ networks:
     driver: bridge
 
 services:
-  app:
-    container_name: tetest
+  tetest:
+    container_name: app
     build: .
     ports:
       - 8080:8080
     restart: on-failure
     depends_on:
       - mysql
+    env_file: .env
     networks:
       - test_network
 
@@ -21,20 +22,20 @@ services:
     container_name: mysql
     ports:
       - 3308:3306
-    env_file: .env
     environment:
-      - MYSQL_ROOT_HOST=${DB_HOST}
-      - MYSQL_USER=${DB_USER}
-      - MYSQL_PASSWORD=${DB_PASSWORD}
-      - MYSQL_DATABASE=${DB_NAME}
-      - MYSQL_ROOT_PASSWORD=${DB_PASSWORD}
+      - MYSQL_ROOT_HOST=mysql
+      - MYSQL_USER=root
+      - MYSQL_PASSWORD=testpass
+      - MYSQL_DATABASE=tetest
+      - MYSQL_ROOT_PASSWORD=testpass
     volumes:
       - mysql:/var/lib/mysql
+      - ./db/baseline.sql:/docker-entrypoint-initdb.d/baseline.sql:ro
     networks:
       - test_network
 
 
 volumes:
-  app:
+  tetest:
   mysql:
 

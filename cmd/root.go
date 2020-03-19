@@ -119,7 +119,7 @@ func initManager() {
 	//---------------------------------------------------------------------------
 	// initializing mysql store
 	//---------------------------------------------------------------------------
-	l.Info("initialzing database connection")
+	l.Info("initializing database connection")
 
 	dsn := fmt.Sprintf(
 		"%s:%s@tcp(%s:%s)/%s",

@@ -1,4 +1,4 @@
-FROM golang:1.14-alpine AS builder
+FROM golang:1.13-alpine AS builder
 
 # installing usual dependencies
 RUN apk add bash ca-certificates git gcc g++ libc-dev curl openssh-client
