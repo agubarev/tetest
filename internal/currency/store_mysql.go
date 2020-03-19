@@ -116,7 +116,7 @@ func (s *defaultMySQLStore) BulkCreate(ctx context.Context, cs []Currency) (_ []
 	return cs, nil
 }
 
-func (s *defaultMySQLStore) HistoryByID(ctx context.Context, id string) (cs []Currency, err error) {
+func (s *defaultMySQLStore) AllByID(ctx context.Context, id string) (cs []Currency, err error) {
 	return s.manyByQuery(ctx, "SELECT * FROM `currency` WHERE id = ? ORDER BY pub_date DESC", id)
 }
 

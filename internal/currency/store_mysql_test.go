@@ -1,4 +1,4 @@
-package currency
+package currency_test
 
 import (
 	"context"
@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/DATA-DOG/go-sqlmock"
+	"github.com/agubarev/tetest/internal/currency"
 	"github.com/gocraft/dbr/v2"
 	"github.com/gocraft/dbr/v2/dialect"
 	"github.com/stretchr/testify/assert"
@@ -20,13 +21,16 @@ func TestDefaultMySQLStore_BulkCreate(t *testing.T) {
 	a.NotNil(mock)
 	defer db.Close()
 
-	store, err := NewDefaultMySQLStore(&dbr.Connection{
+	store, err := currency.NewDefaultMySQLStore(&dbr.Connection{
 		DB:            db,
 		Dialect:       dialect.MySQL,
 		EventReceiver: nil,
 	})
 
-	testdata := []Currency{
+	a.NoError(err)
+	a.NotNil(store)
+
+	testdata := []currency.Currency{
 		{ID: "LVL", Value: 1.00, PubDate: dbr.NewNullTime(time.Now())},
 		{ID: "EUR", Value: 2.00, PubDate: dbr.NewNullTime(time.Now())},
 		{ID: "USD", Value: 3.00, PubDate: dbr.NewNullTime(time.Now())},
@@ -68,11 +72,14 @@ func TestDefaultMySQLStore_AllLatest(t *testing.T) {
 	a.NotNil(mock)
 	defer db.Close()
 
-	store, err := NewDefaultMySQLStore(&dbr.Connection{
+	store, err := currency.NewDefaultMySQLStore(&dbr.Connection{
 		DB:            db,
 		Dialect:       dialect.MySQL,
 		EventReceiver: nil,
 	})
+
+	a.NoError(err)
+	a.NotNil(store)
 
 	rows := sqlmock.NewRows([]string{"id", "value", "pub_date", "created_at", "updated_at"}).
 		AddRow("LVL", 1.00, dbr.NewNullTime(time.Now()), dbr.NewNullTime(time.Now()), dbr.NewNullTime(time.Now())).
@@ -99,11 +106,14 @@ func TestDefaultMySQLStore_HistoryByID(t *testing.T) {
 	a.NotNil(mock)
 	defer db.Close()
 
-	store, err := NewDefaultMySQLStore(&dbr.Connection{
+	store, err := currency.NewDefaultMySQLStore(&dbr.Connection{
 		DB:            db,
 		Dialect:       dialect.MySQL,
 		EventReceiver: nil,
 	})
+
+	a.NoError(err)
+	a.NotNil(store)
 
 	rows := sqlmock.NewRows([]string{"id", "value", "pub_date", "created_at", "updated_at"}).
 		AddRow("EUR", 1.00, dbr.NewNullTime(time.Now()), dbr.NewNullTime(time.Now()), dbr.NewNullTime(time.Now())).
@@ -113,7 +123,7 @@ func TestDefaultMySQLStore_HistoryByID(t *testing.T) {
 	mock.ExpectQuery("SELECT * FROM `currency` WHERE id = 'EUR' ORDER BY pub_date DESC").
 		WillReturnRows(rows)
 
-	cs, err := store.HistoryByID(context.Background(), "EUR")
+	cs, err := store.AllByID(context.Background(), "EUR")
 	a.NoError(err)
 	a.NotNil(cs)
 	a.Len(cs, 3)

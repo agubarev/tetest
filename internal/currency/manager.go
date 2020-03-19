@@ -132,6 +132,8 @@ func (m *Manager) Import(ctx context.Context) (err error) {
 	//---------------------------------------------------------------------------
 	// transforming raw payload into local currency
 	//---------------------------------------------------------------------------
+	m.Logger().Debug("parsing raw currency feed")
+
 	for _, v := range f.Items {
 		parsedMap, err := fn(strings.Split(strings.TrimSpace(v.Description), " "))
 		if err != nil {
@@ -208,7 +210,7 @@ func (m *Manager) GetLatest(ctx context.Context) (cs []Currency, err error) {
 	return cs, nil
 }
 
-func (m *Manager) GetByID(ctx context.Context, id string) (cs []Currency, err error) {
+func (m *Manager) GetAllByID(ctx context.Context, id string) (cs []Currency, err error) {
 	if m == nil {
 		return nil, ErrNilManager
 	}
@@ -221,7 +223,7 @@ func (m *Manager) GetByID(ctx context.Context, id string) (cs []Currency, err er
 	// preparing id value
 	id = strings.ToUpper(strings.TrimSpace(id))
 
-	cs, err = store.HistoryByID(ctx, id)
+	cs, err = store.AllByID(ctx, id)
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to fetch currency history for ID: %s", id)
 	}

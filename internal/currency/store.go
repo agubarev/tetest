@@ -10,5 +10,5 @@ import (
 type Store interface {
 	BulkCreate(ctx context.Context, cs []Currency) (_ []Currency, err error)
 	AllLatest(ctx context.Context) (cs []Currency, err error)
-	HistoryByID(ctx context.Context, id string) (cs []Currency, err error)
+	AllByID(ctx context.Context, id string) (cs []Currency, err error)
 }
