@@ -25,7 +25,7 @@ func NewDefaultMySQLStore(connection *dbr.Connection) (Store, error) {
 }
 
 func (s *defaultMySQLStore) oneByQuery(ctx context.Context, q string, args ...interface{}) (c Currency, err error) {
-	err = s.connection.NewSession(nil).
+	err = s.connection.NewSession(&dbr.NullEventReceiver{}).
 		SelectBySql(q, args...).
 		LoadOneContext(ctx, &c)
 
@@ -43,7 +43,7 @@ func (s *defaultMySQLStore) oneByQuery(ctx context.Context, q string, args ...in
 func (s *defaultMySQLStore) manyByQuery(ctx context.Context, q string, args ...interface{}) (items []Currency, err error) {
 	items = make([]Currency, 0)
 
-	_, err = s.connection.NewSession(nil).
+	_, err = s.connection.NewSession(&dbr.NullEventReceiver{}).
 		SelectBySql(q, args...).
 		LoadContext(ctx, &items)
 
@@ -66,7 +66,8 @@ func (s *defaultMySQLStore) BulkCreate(ctx context.Context, cs []Currency) (_ []
 		return nil, ErrNoData
 	}
 
-	tx, err := s.connection.NewSession(nil).Begin()
+	// NOTE: sqlmock panics without &dbr.NullEventReceiver{}
+	tx, err := s.connection.NewSession(&dbr.NullEventReceiver{}).Begin()
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to initialize database transaction")
 	}
@@ -80,19 +81,14 @@ func (s *defaultMySQLStore) BulkCreate(ctx context.Context, cs []Currency) (_ []
 	// so I'm using a prepared statement, otherwise I'd simply go for the following:
 	// stmt := tx.InsertInto("currency").Columns(guard.DBColumnsFrom(&cs[0])...)
 
-	stmt, err := tx.PrepareContext(ctx, `INSERT INTO currency(id, value, pub_date, created_at)
-		VALUES(?, ?, ?, NOW()) ON DUPLICATE KEY UPDATE value = ?, updated_at = NOW()`)
+	stmt, err := tx.PrepareContext(ctx, `INSERT INTO currency(id, value, pub_date, created_at) VALUES(?, ?, ?, NOW()) ON DUPLICATE KEY UPDATE value = ?, updated_at = NOW()`)
 
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to prepare statement")
 	}
 
 	// statement must be closed afterwards
-	defer func() {
-		if err = stmt.Close(); err != nil {
-			err = errors.Wrap(err, "failed to close prepared statement")
-		}
-	}()
+	defer stmt.Close()
 
 	// validating each c individually
 	for i := range cs {
