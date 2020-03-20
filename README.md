@@ -57,7 +57,12 @@ run the whole thing via `docker-compose up`
 docker-compose up -d
 ```
 
-then, for example, to obtain the latest values of a specific currency, perform a GET request to `http://localhost:8080/api/v1/currency/USD` and get a sample response like the following (output copied from POSTMAN)
+if you want to see the server's continuous output feed, inside the container, you can do this
+```
+docker logs -f app
+```
+
+then, for example, to obtain the latest values of some specific currency, perform a GET request to `http://localhost:8080/api/v1/currency/USD` and get a sample response like the following (output copied from POSTMAN)
 ```
 {
     "status_code": 200,
