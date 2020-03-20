@@ -21,11 +21,12 @@ To run the project you must have docker and docker-compose installed on your sys
 
 ### Installing
 
-Clone the repository
+Clone the repository and install module dependencies
 
 ```
 git clone git@github.com:agubarev/tetest.git
 cd tetest
+go mod tidy
 ```
 
 run the tests
@@ -34,13 +35,19 @@ run the tests
 go test ./...
 ```
 
+run the whole thing via `docker-compose up`
+
+```
+docker-compose up -d
+```
+
 import the latest currency values (although it is done during the server startup)
 
 ```
 docker exec -it app /bin/tetest import
 ```
 
-see something like the following
+and see output like the following
 ```
 ➜  ~ docker exec -it app /bin/tetest import
 2020-03-20T09:32:09.987Z	INFO	cmd/root.go:122	initializing database connection
@@ -51,11 +58,6 @@ see something like the following
 2020-03-20T09:32:10.224Z	DEBUG	[currency]	currency/manager.go:135	parsing raw currency feed
 ```
 
-run the whole thing via `docker-compose up`
-
-```
-docker-compose up -d
-```
 
 if you want to see the server's continuous output feed, inside the container, you can do this
 ```
