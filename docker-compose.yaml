@@ -29,11 +29,9 @@ services:
       - MYSQL_DATABASE=tetest
       - MYSQL_ROOT_PASSWORD=testpass
     volumes:
-      - mysql:/var/lib/mysql
       - ./db/baseline.sql:/docker-entrypoint-initdb.d/baseline.sql:ro
     networks:
       - test_network
-
 
 volumes:
   tetest:

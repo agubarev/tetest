@@ -92,7 +92,7 @@ func (s *defaultMySQLStore) BulkCreate(ctx context.Context, cs []Currency) (_ []
 
 	// validating each c individually
 	for i := range cs {
-		if err := cs[i].validate(); err != nil {
+		if err := cs[i].Validate(); err != nil {
 			return nil, err
 		}
 

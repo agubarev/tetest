@@ -171,7 +171,7 @@ func (m *Manager) BulkCreate(ctx context.Context, cs []Currency) (_ []Currency, 
 
 	// validating and initializing new records
 	for _, c := range cs {
-		if err = c.validate(); err != nil {
+		if err = c.Validate(); err != nil {
 			return nil, err
 		}
 

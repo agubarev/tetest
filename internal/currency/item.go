@@ -15,7 +15,7 @@ type Currency struct {
 	UpdatedAt dbr.NullTime `db:"updated_at" json:"updated_at"`
 }
 
-func (c Currency) validate() (err error) {
+func (c Currency) Validate() (err error) {
 	if strings.TrimSpace(c.ID) == "" {
 		err = ErrEmptyCurrencyID
 	}

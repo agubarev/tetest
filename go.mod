@@ -5,7 +5,6 @@ go 1.14
 require (
 	github.com/DATA-DOG/go-sqlmock v1.4.1
 	github.com/PuerkitoBio/goquery v1.5.1 // indirect
-	github.com/davecgh/go-spew v1.1.1
 	github.com/go-chi/chi v4.0.3+incompatible
 	github.com/go-sql-driver/mysql v1.5.0
 	github.com/gocraft/dbr/v2 v2.7.0
